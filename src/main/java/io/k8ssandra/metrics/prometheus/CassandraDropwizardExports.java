@@ -156,8 +156,6 @@ public class CassandraDropwizardExports extends io.prometheus.client.Collector i
 
     @Override
     public List<MetricFamilySamples> collect() {
-        logger.info("=====> Starting collection of metrics");
-
         try {
             Map<String, MetricFamilySamples> mfSamplesMap = new HashMap<String, MetricFamilySamples>();
 

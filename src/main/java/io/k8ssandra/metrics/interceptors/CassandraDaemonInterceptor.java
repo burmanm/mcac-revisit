@@ -32,15 +32,13 @@ public class CassandraDaemonInterceptor
         zuper.call();
         logger.info("Starting K8ssandra Metric Collector for Apache Cassandra");
 
-//        CassandraMetricsMapper builder = new CassandraMetricsMapper();
-//        builder.initMetrics(CassandraMetricsRegistry.Metrics);
         new CassandraDropwizardExports(CassandraMetricsRegistry.Metrics).register();
 
         final HTTPServer server = new HTTPServer.Builder()
                 .withPort(9104)
                 .build();
 
-        logger.info("Metrics server started");
+        logger.info("Metrics collector started");
         Runtime.getRuntime().addShutdownHook(new Thread(server::close));
     }
 }
