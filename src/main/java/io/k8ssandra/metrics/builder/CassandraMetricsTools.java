@@ -20,17 +20,17 @@ public class CassandraMetricsTools {
 
     public final static String CLUSTER_LABEL_NAME = "cluster";
     public final static String DATACENTER_LABEL_NAME = "datacenter";
-    public final static String POD_LABEL_NAME = "pod_name";
+    public final static String INSTANCE_LABEL_NAME = "instance";
     public final static String RACK_LABEL_NAME = "rack";
     public final static String HOSTID_LABEL_NAME = "host";
 
     public final static String CLUSTER_NAME = getClusterName();
     public final static String RACK_NAME = getRack();
-    public final static String DATACENTER_NAME = getDataCenter();
+    public final static String DATACENTER_NAME = getDatacenter();
     public final static String POD_NAME = getBroadcastAddress().getHostAddress();
     public final static String HOST_ID = getHostId();
 
-    public final static List<String> DEFAULT_LABEL_NAMES = Arrays.asList(HOSTID_LABEL_NAME, POD_LABEL_NAME, CLUSTER_LABEL_NAME, DATACENTER_LABEL_NAME, RACK_LABEL_NAME);
+    public final static List<String> DEFAULT_LABEL_NAMES = Arrays.asList(HOSTID_LABEL_NAME, INSTANCE_LABEL_NAME, CLUSTER_LABEL_NAME, DATACENTER_LABEL_NAME, RACK_LABEL_NAME);
     public final static List<String> DEFAULT_LABEL_VALUES = Arrays.asList(HOST_ID, POD_NAME, CLUSTER_NAME, DATACENTER_NAME, RACK_NAME);
 
     private Map<String, CassandraMetricDefinition> metricDefinitions;
@@ -75,7 +75,7 @@ public class CassandraMetricsTools {
         }
     }
 
-    public static String getDataCenter()
+    public static String getDatacenter()
     {
         try
         {

@@ -30,7 +30,10 @@ public class CassandraDaemonInterceptor
 
     public static void intercept(@SuperCall Callable<Void> zuper) throws Exception {
         zuper.call();
-        logger.info("Starting K8ssandra Metric Collector for Apache Cassandra");
+        logger.info("Starting Metric Collector for Apache Cassandra");
+
+        // TODO Add configuration options here? For example:
+        //      port, include JVM metrics
 
         new CassandraDropwizardExports(CassandraMetricsRegistry.Metrics).register();
 
