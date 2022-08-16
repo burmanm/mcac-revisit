@@ -28,7 +28,6 @@ public class MetricRegistryParsingBenchmark {
 
             registry.register(String.format("g_nr_%d", i), (Gauge<Integer>) () -> 3);
         }
-        Thread.sleep(1000); // Let registryListener catch up
     }
 
     @Benchmark
