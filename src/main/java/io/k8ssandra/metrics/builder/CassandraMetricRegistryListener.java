@@ -1,7 +1,6 @@
 package io.k8ssandra.metrics.builder;
 
 import com.codahale.metrics.*;
-import io.k8ssandra.metrics.prometheus.CassandraDropwizardExports;
 import io.prometheus.client.Collector;
 import org.jetbrains.annotations.NotNull;
 
@@ -20,15 +19,6 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
 
     // This cache is used for the remove purpose, we need dropwizardName -> metricName mapping
     private ConcurrentHashMap<String, String> cache;
-
-    public static ArrayList<List<String>> PRECOMPUTED_QUANTILE_LABEL_VALUES;
-    static {
-        PRECOMPUTED_QUANTILE_LABEL_VALUES = new ArrayList<>(CassandraDropwizardExports.PRECOMPUTED_QUANTILES.length);
-        for(int i = 0; i < CassandraDropwizardExports.PRECOMPUTED_QUANTILES.length; i++) {
-            PRECOMPUTED_QUANTILE_LABEL_VALUES.add(i, new ArrayList<>(CassandraMetricsTools.DEFAULT_LABEL_VALUES));
-            PRECOMPUTED_QUANTILE_LABEL_VALUES.get(i).add(CassandraDropwizardExports.PRECOMPUTED_QUANTILES_TEXT[i]);
-        }
-    }
 
     public CassandraMetricRegistryListener(ConcurrentHashMap<String, RefreshableMetricFamilySamples> familyCache) {
         parser = new CassandraMetricNameParser(CassandraMetricsTools.DEFAULT_LABEL_NAMES, CassandraMetricsTools.DEFAULT_LABEL_VALUES);
@@ -136,9 +126,10 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
                     snapshot.get99thPercentile(),
                     snapshot.get999thPercentile()
             };
-            List<Collector.MetricFamilySamples.Sample> samples = new ArrayList<>(CassandraDropwizardExports.PRECOMPUTED_QUANTILES.length + 1);
-            for(int i = 0; i < CassandraDropwizardExports.PRECOMPUTED_QUANTILES.length; i++) {
-                List<String> labelValues = PRECOMPUTED_QUANTILE_LABEL_VALUES.get(i);
+            List<Collector.MetricFamilySamples.Sample> samples = new ArrayList<>(CassandraMetricsTools.PRECOMPUTED_QUANTILES.length + 1);
+            for(int i = 0; i < CassandraMetricsTools.PRECOMPUTED_QUANTILES.length; i++) {
+                List<String> labelValues = new ArrayList<>(proto.getLabelValues());
+                labelValues.add(CassandraMetricsTools.PRECOMPUTED_QUANTILES_TEXT[i]);
                 Collector.MetricFamilySamples.Sample sample = new Collector.MetricFamilySamples.Sample(
                         proto.getMetricName(),
                         proto.getLabelNames(),
@@ -189,9 +180,10 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
                     snapshot.get99thPercentile(),
                     snapshot.get999thPercentile()
             };
-            List<Collector.MetricFamilySamples.Sample> samples = new ArrayList<>(CassandraDropwizardExports.PRECOMPUTED_QUANTILES.length + 1);
-            for(int i = 0; i < CassandraDropwizardExports.PRECOMPUTED_QUANTILES.length; i++) {
-                List<String> labelValues = PRECOMPUTED_QUANTILE_LABEL_VALUES.get(i);
+            List<Collector.MetricFamilySamples.Sample> samples = new ArrayList<>(CassandraMetricsTools.PRECOMPUTED_QUANTILES.length + 1);
+            for(int i = 0; i < CassandraMetricsTools.PRECOMPUTED_QUANTILES.length; i++) {
+                List<String> labelValues = new ArrayList<>(proto.getLabelValues());
+                labelValues.add(CassandraMetricsTools.PRECOMPUTED_QUANTILES_TEXT[i]);
                 Collector.MetricFamilySamples.Sample sample = new Collector.MetricFamilySamples.Sample(
                         proto.getMetricName(),
                         proto.getLabelNames(),

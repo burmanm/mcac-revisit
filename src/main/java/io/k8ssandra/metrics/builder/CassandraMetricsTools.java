@@ -3,8 +3,6 @@ package io.k8ssandra.metrics.builder;
 import org.apache.cassandra.config.DatabaseDescriptor;
 import org.apache.cassandra.locator.IEndpointSnitch;
 import org.apache.cassandra.service.StorageService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
 import java.net.InetAddress;
@@ -15,8 +13,6 @@ import java.util.List;
 import java.util.Map;
 
 public class CassandraMetricsTools {
-
-    private static final Logger logger = LoggerFactory.getLogger(CassandraMetricsTools.class);
 
     public final static String CLUSTER_LABEL_NAME = "cluster";
     public final static String DATACENTER_LABEL_NAME = "datacenter";
@@ -32,6 +28,17 @@ public class CassandraMetricsTools {
 
     public final static List<String> DEFAULT_LABEL_NAMES = Arrays.asList(HOSTID_LABEL_NAME, INSTANCE_LABEL_NAME, CLUSTER_LABEL_NAME, DATACENTER_LABEL_NAME, RACK_LABEL_NAME);
     public final static List<String> DEFAULT_LABEL_VALUES = Arrays.asList(HOST_ID, POD_NAME, CLUSTER_NAME, DATACENTER_NAME, RACK_NAME);
+
+    public static final Double[] PRECOMPUTED_QUANTILES = new Double[]{0.5, 0.75, 0.95, 0.98, 0.99, 0.999};
+
+    // This is to reduce allocations
+    public static final String[] PRECOMPUTED_QUANTILES_TEXT = new String[PRECOMPUTED_QUANTILES.length];
+
+    static {
+        for (int i = 0; i < PRECOMPUTED_QUANTILES.length; i++) {
+            PRECOMPUTED_QUANTILES_TEXT[i] = PRECOMPUTED_QUANTILES[i].toString();
+        }
+    }
 
     private Map<String, CassandraMetricDefinition> metricDefinitions;
 
