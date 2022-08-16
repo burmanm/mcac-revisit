@@ -1,11 +1,10 @@
 package io.k8ssandra.metrics.builder;
 
 import io.prometheus.client.Collector;
-import org.apache.cassandra.config.DatabaseDescriptor;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
+import java.util.function.Supplier;
 
 public class CassandraMetricNameParser {
     public final static String KEYSPACE_METRIC_PREFIX = "org.apache.cassandra.metrics.keyspace.";
@@ -29,7 +28,7 @@ public class CassandraMetricNameParser {
      * @param suffix DropwizardExporter's _count, _total and other additional calculated metrics (not part of CassandraMetricsRegistry)
      * @return
      */
-    public CassandraMetricDefinition parseDropwizardMetric(String dropwizardName, String suffix, List<String> additionalLabelNames, List<String> additionalLabelValues) {
+    public CassandraMetricDefinition parseDropwizardMetric(String dropwizardName, String suffix, List<String> additionalLabelNames, List<String> additionalLabelValues, Supplier<Double> valueGetter) {
         String metricName = dropwizardName;
 
         List<String> labelNames = new ArrayList<>();
@@ -70,7 +69,7 @@ public class CassandraMetricNameParser {
         labelNames.addAll(additionalLabelNames);
         labelValues.addAll(additionalLabelValues);
 
-        return new CassandraMetricDefinition(metricName, labelNames, labelValues);
+        return new CassandraMetricDefinition(metricName, labelNames, labelValues, valueGetter);
     }
 
     // This is the method used in the MCAC
