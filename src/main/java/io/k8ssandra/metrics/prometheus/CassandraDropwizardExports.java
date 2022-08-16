@@ -27,6 +27,15 @@ public class CassandraDropwizardExports extends Collector implements Collector.D
 
     public static final Double[] PRECOMPUTED_QUANTILES = new Double[]{0.5, 0.75, 0.95, 0.98, 0.99, 0.999};
 
+    // This is to reduce allocations
+    public static final String[] PRECOMPUTED_QUANTILES_TEXT = new String[PRECOMPUTED_QUANTILES.length];
+
+    static {
+        for (int i = 0; i < PRECOMPUTED_QUANTILES.length; i++) {
+            PRECOMPUTED_QUANTILES_TEXT[i] = PRECOMPUTED_QUANTILES[i].toString();
+        }
+    }
+
     /**
      * Creates a new DropwizardExports with a {@link DefaultSampleBuilder} and {@link MetricFilter#ALL}.
      *

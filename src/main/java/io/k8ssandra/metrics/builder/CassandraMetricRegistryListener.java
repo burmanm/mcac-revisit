@@ -21,6 +21,15 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
     // This cache is used for the remove purpose, we need dropwizardName -> metricName mapping
     private ConcurrentHashMap<String, String> cache;
 
+    public static ArrayList<List<String>> PRECOMPUTED_QUANTILE_LABEL_VALUES;
+    static {
+        PRECOMPUTED_QUANTILE_LABEL_VALUES = new ArrayList<>(CassandraDropwizardExports.PRECOMPUTED_QUANTILES.length);
+        for(int i = 0; i < CassandraDropwizardExports.PRECOMPUTED_QUANTILES.length; i++) {
+            PRECOMPUTED_QUANTILE_LABEL_VALUES.add(i, new ArrayList<>(CassandraMetricsTools.DEFAULT_LABEL_VALUES));
+            PRECOMPUTED_QUANTILE_LABEL_VALUES.get(i).add(CassandraDropwizardExports.PRECOMPUTED_QUANTILES_TEXT[i]);
+        }
+    }
+
     public CassandraMetricRegistryListener(ConcurrentHashMap<String, RefreshableMetricFamilySamples> familyCache) {
         parser = new CassandraMetricNameParser(CassandraMetricsTools.DEFAULT_LABEL_NAMES, CassandraMetricsTools.DEFAULT_LABEL_VALUES);
         cache = new ConcurrentHashMap<>();
@@ -105,7 +114,7 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
         // TODO Do we want extra processing for DecayingHistogram and EstimatedHistograms?
 
         final CassandraMetricDefinition proto = parser.parseDropwizardMetric(dropwizardName, "", Arrays.asList("quantile"), new ArrayList<>(), () -> 0.0);
-        final CassandraMetricDefinition count = parser.parseDropwizardMetric(dropwizardName, "_count", new ArrayList<>(), new ArrayList<>(), () -> Long.valueOf(histogram.getCount()).doubleValue());
+        final CassandraMetricDefinition count = parser.parseDropwizardMetric(dropwizardName, "_count", new ArrayList<>(), new ArrayList<>(), () -> (double) histogram.getCount());
 
         Supplier<List<Collector.MetricFamilySamples.Sample>> supplySamples = getHistogramSupplier(histogram, proto, count, 1.0);
 
@@ -129,12 +138,12 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
             };
             List<Collector.MetricFamilySamples.Sample> samples = new ArrayList<>(CassandraDropwizardExports.PRECOMPUTED_QUANTILES.length + 1);
             for(int i = 0; i < CassandraDropwizardExports.PRECOMPUTED_QUANTILES.length; i++) {
-                List<String> labelValues = proto.getLabelValues();
-                labelValues.add(CassandraDropwizardExports.PRECOMPUTED_QUANTILES[i].toString());
+                List<String> labelValues = PRECOMPUTED_QUANTILE_LABEL_VALUES.get(i);
+//                labelValues.add(CassandraDropwizardExports.PRECOMPUTED_QUANTILES_TEXT[i]);
                 Collector.MetricFamilySamples.Sample sample = new Collector.MetricFamilySamples.Sample(
                         proto.getMetricName(),
                         proto.getLabelNames(),
-                        proto.getLabelValues(),
+                        labelValues,
                         values[i] * factor);
                 samples.add(sample);
             }
@@ -162,7 +171,7 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
 
     @Override
     public void onMeterAdded(String name, Meter meter) {
-        Supplier<Double> getValue = () -> Long.valueOf(meter.getCount()).doubleValue();
+        Supplier<Double> getValue = () -> (double) meter.getCount();
         CassandraMetricDefinition total = parser.parseDropwizardMetric(name, "_total", new ArrayList<>(), new ArrayList<>(), getValue);
         RefreshableMetricFamilySamples familySamples = new RefreshableMetricFamilySamples(total.getMetricName(), Collector.Type.COUNTER, "", new ArrayList<>());
         familySamples.addDefinition(total);
@@ -188,12 +197,11 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
             };
             List<Collector.MetricFamilySamples.Sample> samples = new ArrayList<>(CassandraDropwizardExports.PRECOMPUTED_QUANTILES.length + 1);
             for(int i = 0; i < CassandraDropwizardExports.PRECOMPUTED_QUANTILES.length; i++) {
-                List<String> labelValues = proto.getLabelValues();
-                labelValues.add(CassandraDropwizardExports.PRECOMPUTED_QUANTILES[i].toString());
+                List<String> labelValues = PRECOMPUTED_QUANTILE_LABEL_VALUES.get(i);
                 Collector.MetricFamilySamples.Sample sample = new Collector.MetricFamilySamples.Sample(
                         proto.getMetricName(),
                         proto.getLabelNames(),
-                        proto.getLabelValues(),
+                        labelValues,
                         values[i] * factor);
                 samples.add(sample);
             }
@@ -208,7 +216,7 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
     public void onTimerAdded(String dropwizardName, Timer timer) {
         double factor = 1.0D / TimeUnit.SECONDS.toNanos(1L);
         final CassandraMetricDefinition proto = parser.parseDropwizardMetric(dropwizardName, "", Arrays.asList("quantile"), new ArrayList<>(), () -> 0.0);
-        final CassandraMetricDefinition count = parser.parseDropwizardMetric(dropwizardName, "_count", new ArrayList<>(), new ArrayList<>(), () -> Long.valueOf(timer.getCount()).doubleValue());
+        final CassandraMetricDefinition count = parser.parseDropwizardMetric(dropwizardName, "_count", new ArrayList<>(), new ArrayList<>(), () -> (double) timer.getCount());
 
         Supplier<List<Collector.MetricFamilySamples.Sample>> supplySamples = getTimerSupplier(timer, proto, count, factor);
 

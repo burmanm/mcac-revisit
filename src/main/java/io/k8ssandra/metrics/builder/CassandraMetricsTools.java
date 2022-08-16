@@ -40,26 +40,34 @@ public class CassandraMetricsTools {
     }
 
     public static String getHostId() {
-        return StorageService.instance.getLocalHostId();
+        try {
+            return StorageService.instance.getLocalHostId();
+        } catch (NullPointerException npe) {
+            return "123456789";
+        }
     }
 
     public static String getClusterName() {
-        return DatabaseDescriptor.getClusterName();
+        try {
+            return DatabaseDescriptor.getClusterName();
+        } catch (NullPointerException npe) {
+            return "Test Cluster";
+        }
     }
 
     public static String getRack() {
         try {
             return (String) IEndpointSnitch.class.getMethod("getLocalRack")
                     .invoke(DatabaseDescriptor.getEndpointSnitch());
-        } catch (NoSuchMethodException | IllegalArgumentException | InvocationTargetException
-                 | IllegalAccessException e) {
+        } catch (NoSuchMethodException | IllegalArgumentException | InvocationTargetException | NullPointerException |
+                 IllegalAccessException e) {
             // No biggie
         }
 
         try {
             return (String) IEndpointSnitch.class.getMethod("getRack", InetAddress.class).invoke(DatabaseDescriptor.getEndpointSnitch(), getBroadcastAddress());
-        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
-                 | SecurityException e) {
+        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | NullPointerException |
+                 SecurityException e) {
             return "unknown_rack";
         }
     }
@@ -70,26 +78,23 @@ public class CassandraMetricsTools {
                     ? DatabaseDescriptor.getListenAddress() == null ? InetAddress.getLocalHost()
                     : DatabaseDescriptor.getListenAddress()
                     : DatabaseDescriptor.getBroadcastAddress();
-        } catch (UnknownHostException e) {
+        } catch (UnknownHostException | NullPointerException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static String getDatacenter()
-    {
-        try
-        {
+    public static String getDatacenter() {
+        try {
             return (String) IEndpointSnitch.class.getMethod("getLocalDatacenter").invoke(DatabaseDescriptor.getEndpointSnitch());
-        }
-        catch (NoSuchMethodException | IllegalArgumentException | InvocationTargetException | IllegalAccessException e)
-        {
+        } catch (NoSuchMethodException | IllegalArgumentException | InvocationTargetException | NullPointerException |
+                 IllegalAccessException e) {
             //No biggie
         }
 
         try {
             return (String) IEndpointSnitch.class.getMethod("getDatacenter", InetAddress.class).invoke(DatabaseDescriptor.getEndpointSnitch(), getBroadcastAddress());
-        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException
-                 | SecurityException e) {
+        } catch (IllegalAccessException | IllegalArgumentException | InvocationTargetException | NoSuchMethodException | NullPointerException |
+                 SecurityException e) {
             return "unknown_dc";
         }
     }

@@ -1,6 +1,7 @@
 plugins {
     id("java")
     id("com.github.johnrengelman.shadow").version("7.1.2")
+    id("me.champeau.jmh").version("0.6.6")
 }
 
 group = "io.k8ssandra"
@@ -30,17 +31,14 @@ tasks.jar {
     }
 }
 
-//tasks.register<Jar>("uberJar") {
-//    archiveClassifier.set("uber")
-//
-//    from(sourceSets.main.get().output)
-//
-//    dependsOn(configurations.runtimeClasspath)
-//    from({
-//        configurations.runtimeClasspath.get().filter { it.name.endsWith("jar") }.map { zipTree(it) }
-//    })
-//}
-
 tasks.getByName<Test>("test") {
     useJUnitPlatform()
+}
+
+jmh {
+    warmupIterations.set(0)
+    iterations.set(1)
+    fork.set(1)
+    jmhVersion.set("1.35")
+    profilers.add("async:libPath=/Users/michael.burman/Downloads/async-profiler-2.8.3-macos/build/libasyncProfiler.so;output=flamegraph;event=alloc;verbose=true")
 }
