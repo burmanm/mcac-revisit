@@ -139,7 +139,6 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
             List<Collector.MetricFamilySamples.Sample> samples = new ArrayList<>(CassandraDropwizardExports.PRECOMPUTED_QUANTILES.length + 1);
             for(int i = 0; i < CassandraDropwizardExports.PRECOMPUTED_QUANTILES.length; i++) {
                 List<String> labelValues = PRECOMPUTED_QUANTILE_LABEL_VALUES.get(i);
-//                labelValues.add(CassandraDropwizardExports.PRECOMPUTED_QUANTILES_TEXT[i]);
                 Collector.MetricFamilySamples.Sample sample = new Collector.MetricFamilySamples.Sample(
                         proto.getMetricName(),
                         proto.getLabelNames(),
@@ -156,17 +155,12 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
 
     @Override
     public void onHistogramRemoved(String dropwizardName) {
-        // TODO FIX
         String metricName = cache.get(dropwizardName);
 
         RefreshableMetricFamilySamples familySamples = familyCache.get(metricName);
         familySamples.removeCollectionSupplier(metricName);
 
         removeFromCache(dropwizardName);
-//        for (Double quantile : CassandraDropwizardExports.PRECOMPUTED_QUANTILES) {
-//            removeFromCache(CassandraDropwizardExports.quantileCacheKey(dropwizardName, quantile));
-//        }
-//        removeFromCache(dropwizardName + "_count");
     }
 
     @Override
@@ -180,7 +174,7 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
 
     @Override
     public void onMeterRemoved(String name) {
-        removeFromCache(name + "_total");
+        removeFromCache(name);
     }
 
     @NotNull
@@ -228,7 +222,6 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
 
     @Override
     public void onTimerRemoved(String name) {
-        // TODO FIX
-        removeFromCache(name);
+        onHistogramRemoved(name);
     }
 }

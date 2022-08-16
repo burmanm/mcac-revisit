@@ -13,7 +13,7 @@ public class MetricRegistryParsingBenchmark {
 
     private CassandraDropwizardExports exporter;
 
-    @Param({ "10" })
+    @Param({ "1000" })
     private int metricsCount;
 
     @Setup(Level.Trial)

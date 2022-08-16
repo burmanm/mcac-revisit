@@ -16,7 +16,9 @@ dependencies {
     implementation("net.bytebuddy:byte-buddy:1.12.13")
     implementation("io.prometheus:simpleclient_httpserver:0.16.0")
     implementation("io.prometheus:simpleclient_dropwizard:0.16.0")
+
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.0")
+    testImplementation("com.codahale.metrics:metrics-core:3.0.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.0")
     testRuntimeOnly("org.apache.cassandra:cassandra-all:4.0.5")
 }
@@ -36,9 +38,9 @@ tasks.getByName<Test>("test") {
 }
 
 jmh {
-    warmupIterations.set(0)
+    warmupIterations.set(1)
     iterations.set(1)
     fork.set(1)
     jmhVersion.set("1.35")
-    profilers.add("async:libPath=/Users/michael.burman/Downloads/async-profiler-2.8.3-macos/build/libasyncProfiler.so;output=flamegraph;event=alloc;verbose=true")
+    profilers.add("async:libPath=/Users/michael.burman/Downloads/async-profiler-2.8.3-macos/build/libasyncProfiler.so;output=flamegraph;event=cpu;verbose=true")
 }
