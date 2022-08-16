@@ -2,6 +2,7 @@ package io.k8ssandra.metrics.interceptors;
 
 import io.k8ssandra.metrics.prometheus.CassandraDropwizardExports;
 import io.prometheus.client.exporter.HTTPServer;
+import io.prometheus.client.hotspot.DefaultExports;
 import net.bytebuddy.agent.builder.AgentBuilder.Transformer;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.implementation.MethodDelegation;
@@ -32,11 +33,13 @@ public class CassandraDaemonInterceptor
         zuper.call();
         logger.info("Starting Metric Collector for Apache Cassandra");
 
-        // TODO Add configuration options here? For example:
-        //      port, include JVM metrics
-
+        // Add Cassandra metrics
         new CassandraDropwizardExports(CassandraMetricsRegistry.Metrics).register();
 
+        // Add JVM metrics
+        DefaultExports.initialize();
+
+        // Share them from HTTP server
         final HTTPServer server = new HTTPServer.Builder()
                 .withPort(9104)
                 .build();
