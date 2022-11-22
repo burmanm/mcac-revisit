@@ -24,11 +24,12 @@ public class MetricsRegisteryTest {
             registry.timer(String.format("t_nr_%d", i));
             registry.histogram(String.format("h_nr_%d", i));
             registry.register(String.format("g_nr_%d", i), (Gauge<Integer>) () -> 3);
+            registry.register(String.format("gh_nr_%d", i), (Gauge<long[]>) () -> new long[]{1,2,3,0});
         }
 
         List<Collector.MetricFamilySamples> collect = exporter.collect();
         int firstCollectSize = collect.size();
-        assertEquals(5 * metricsCount, firstCollectSize);
+        assertEquals(6 * metricsCount, firstCollectSize);
         collect = exporter.collect();
         int secondCollectSize = collect.size();
 
@@ -41,6 +42,7 @@ public class MetricsRegisteryTest {
             registry.remove(String.format("t_nr_%d", i));
             registry.remove(String.format("h_nr_%d", i));
             registry.remove(String.format("g_nr_%d", i));
+            registry.remove(String.format("gh_nr_%d", i));
         }
 
         collect = exporter.collect();
