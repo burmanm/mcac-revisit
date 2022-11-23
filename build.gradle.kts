@@ -12,7 +12,7 @@ repositories {
 }
 
 dependencies {
-    compileOnly("org.apache.cassandra:cassandra-all:4.0.5")
+    compileOnly("org.apache.cassandra:cassandra-all:4.0.7")
     implementation("net.bytebuddy:byte-buddy:1.12.13")
     implementation("io.prometheus:simpleclient_httpserver:0.16.0")
     implementation("io.prometheus:simpleclient_dropwizard:0.16.0")
@@ -21,7 +21,7 @@ dependencies {
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.0")
     testImplementation("com.codahale.metrics:metrics-core:3.0.2")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.0")
-    testRuntimeOnly("org.apache.cassandra:cassandra-all:4.0.5")
+    testRuntimeOnly("org.apache.cassandra:cassandra-all:4.0.7")
 }
 
 tasks.jar {

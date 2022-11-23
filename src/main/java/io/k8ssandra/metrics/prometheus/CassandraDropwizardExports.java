@@ -5,12 +5,10 @@ import com.codahale.metrics.MetricRegistry;
 import io.k8ssandra.metrics.builder.CassandraMetricRegistryListener;
 import io.k8ssandra.metrics.builder.RefreshableMetricFamilySamples;
 import io.prometheus.client.Collector;
-import io.prometheus.client.dropwizard.samplebuilder.DefaultSampleBuilder;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -49,7 +47,6 @@ public class CassandraDropwizardExports extends Collector implements Collector.D
 
     @Override
     public List<MetricFamilySamples> collect() {
-
         try {
             for (RefreshableMetricFamilySamples value : familyCache.values()) {
                 value.refreshSamples();

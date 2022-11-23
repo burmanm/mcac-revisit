@@ -12,7 +12,7 @@ public class CassandraMetricDefinition {
     private final List<String> labelNames;
     private final List<String> labelValues;
     private final String metricName;
-    private final Supplier<Double> valueGetter;
+    private Supplier<Double> valueGetter;
 
     public CassandraMetricDefinition(String metricName, List<String> labelNames, List<String> labelValues, Supplier<Double> valueGetter) {
         this.labelNames = labelNames;
@@ -31,6 +31,10 @@ public class CassandraMetricDefinition {
 
     public String getMetricName() {
         return metricName;
+    }
+
+    void setValueGetter(Supplier<Double> valueGetter) {
+        this.valueGetter = valueGetter;
     }
 
     public Collector.MetricFamilySamples.Sample buildSample() {
