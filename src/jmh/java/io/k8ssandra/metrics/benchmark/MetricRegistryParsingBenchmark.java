@@ -27,6 +27,7 @@ public class MetricRegistryParsingBenchmark {
             registry.histogram(String.format("h_nr_%d", i));
 
             registry.register(String.format("g_nr_%d", i), (Gauge<Integer>) () -> 3);
+            registry.register(String.format("gh_nr_%d", i), (Gauge<long[]>) () -> new long[]{1,2,3,0});
         }
     }
 
