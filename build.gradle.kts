@@ -13,9 +13,8 @@ repositories {
 
 dependencies {
     compileOnly("org.apache.cassandra:cassandra-all:4.0.7")
-    implementation("net.bytebuddy:byte-buddy:1.12.13")
+    implementation("net.bytebuddy:byte-buddy:1.12.19")
     implementation("io.prometheus:simpleclient_httpserver:0.16.0")
-    implementation("io.prometheus:simpleclient_dropwizard:0.16.0")
     implementation("io.prometheus:simpleclient_hotspot:0.16.0")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.0")
@@ -43,5 +42,5 @@ jmh {
     iterations.set(1)
     fork.set(1)
     jmhVersion.set("1.35")
-    profilers.add("async:libPath=/Users/michael.burman/Downloads/async-profiler-2.8.3-macos/build/libasyncProfiler.so;output=flamegraph;event=cpu;verbose=true")
+    profilers.add("async:libPath=/Users/michael.burman/Downloads/async-profiler-2.8.3-macos/build/libasyncProfiler.so;output=flamegraph;event=alloc;verbose=true")
 }

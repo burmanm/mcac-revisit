@@ -1,6 +1,8 @@
 package io.k8ssandra.metrics.builder;
 
 import com.codahale.metrics.Gauge;
+import com.codahale.metrics.Metric;
+import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import io.k8ssandra.metrics.prometheus.CassandraDropwizardExports;
 import io.prometheus.client.Collector;
@@ -45,6 +47,32 @@ public class MetricsRegistryTest {
             registry.remove(String.format("gh_nr_%d", i));
         }
 
+        collect = exporter.collect();
+        assertEquals(0, collect.size());
+    }
+
+    @Test
+    void verifyRegistryFilteredListener() {
+        MetricRegistry registry = new MetricRegistry();
+        MetricFilter filter = new MetricFilter() {
+            @Override
+            public boolean matches(String name, Metric metric) {
+                return name.startsWith("g_a");
+            }
+        };
+        CassandraDropwizardExports exporter = new CassandraDropwizardExports(registry, filter);
+        int metricsCount = 10;
+        for (int i = 0; i < metricsCount; i++) {
+            registry.register(String.format("g_nr_%d", i), (Gauge<Integer>) () -> 3);
+            registry.register(String.format("g_a_%d", i), (Gauge<Integer>) () -> 3);
+        }
+        List<Collector.MetricFamilySamples> collect = exporter.collect();
+        assertEquals(metricsCount, collect.size());
+
+        for (int i = 0; i < metricsCount; i++) {
+            registry.remove(String.format("g_nr_%d", i));
+            registry.remove(String.format("g_a_%d", i));
+        }
         collect = exporter.collect();
         assertEquals(0, collect.size());
     }

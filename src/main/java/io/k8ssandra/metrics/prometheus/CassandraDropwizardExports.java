@@ -42,7 +42,7 @@ public class CassandraDropwizardExports extends Collector implements Collector.D
         this.registry = registry;
         this.metricFilter = metricFilter;
         this.familyCache = new ConcurrentHashMap<>();
-        registry.addListener(new CassandraMetricRegistryListener(this.familyCache));
+        registry.addListener(new CassandraMetricRegistryListener(this.familyCache, metricFilter));
     }
 
     @Override
