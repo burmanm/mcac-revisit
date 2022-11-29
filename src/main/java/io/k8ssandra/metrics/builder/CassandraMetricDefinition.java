@@ -4,9 +4,10 @@ import io.prometheus.client.Collector;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
-public class CassandraMetricDefinition {
+public class CassandraMetricDefinition implements Consumer<List<Collector.MetricFamilySamples.Sample>> {
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(CassandraMetricDefinition.class);
 
     private final List<String> labelNames;
@@ -14,10 +15,11 @@ public class CassandraMetricDefinition {
     private final String metricName;
     private Supplier<Double> valueGetter;
 
-    public CassandraMetricDefinition(String metricName, List<String> labelNames, List<String> labelValues, Supplier<Double> valueGetter) {
+    private Consumer<List<Collector.MetricFamilySamples.Sample>> filler;
+
+    public CassandraMetricDefinition(String metricName, List<String> labelNames, List<String> labelValues) {
         this.labelNames = labelNames;
         this.labelValues = labelValues;
-        this.valueGetter = valueGetter;
         this.metricName = metricName;
     }
 
@@ -35,14 +37,24 @@ public class CassandraMetricDefinition {
 
     void setValueGetter(Supplier<Double> valueGetter) {
         this.valueGetter = valueGetter;
+        this.filler = samples -> samples.add(buildSample());
     }
 
-    public Collector.MetricFamilySamples.Sample buildSample() {
+    void setFiller(Consumer<List<Collector.MetricFamilySamples.Sample>> filler) {
+        this.filler = filler;
+    }
+
+    private Collector.MetricFamilySamples.Sample buildSample() {
         return new Collector.MetricFamilySamples.Sample(
                 getMetricName(),
                 getLabelNames(),
                 getLabelValues(),
                 valueGetter.get()
         );
+    }
+
+    @Override
+    public void accept(List<Collector.MetricFamilySamples.Sample> samples) {
+        this.filler.accept(samples);
     }
 }

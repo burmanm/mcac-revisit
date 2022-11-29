@@ -16,7 +16,7 @@ public class MetricsParsingTest {
         String dropwizardName = "org.apache.cassandra.metrics.Table.RepairedDataTrackingOverreadRows.system_schema.aggregates";
 
         CassandraMetricNameParser parser = new CassandraMetricNameParser(Arrays.asList(""), Arrays.asList(""));
-        CassandraMetricDefinition metricDefinition = parser.parseDropwizardMetric(dropwizardName, "", new ArrayList<>(), new ArrayList<>(), () -> 0.0);
+        CassandraMetricDefinition metricDefinition = parser.parseDropwizardMetric(dropwizardName, "", new ArrayList<>(), new ArrayList<>());
 
         assertEquals(-1, metricDefinition.getMetricName().indexOf("system_schema"));
         assertEquals(-1, metricDefinition.getMetricName().indexOf("aggregates"));

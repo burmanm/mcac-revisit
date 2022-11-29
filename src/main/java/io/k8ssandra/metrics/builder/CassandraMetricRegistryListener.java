@@ -4,18 +4,20 @@ import com.codahale.metrics.*;
 import io.prometheus.client.Collector;
 import org.apache.cassandra.utils.EstimatedHistogram;
 import org.jetbrains.annotations.NotNull;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static io.k8ssandra.metrics.builder.CassandraMetricsTools.PRECOMPUTED_QUANTILES;
 import static io.k8ssandra.metrics.builder.CassandraMetricsTools.PRECOMPUTED_QUANTILES_TEXT;
 
 public class CassandraMetricRegistryListener implements MetricRegistryListener {
+
+    private static final org.slf4j.Logger logger = LoggerFactory.getLogger(CassandraMetricRegistryListener.class);
 
     private final CassandraMetricNameParser parser;
 
@@ -34,17 +36,16 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
     }
 
     public void updateCache(String dropwizardName, String metricName, RefreshableMetricFamilySamples prototype) {
+        // TODO Add filtering here
+
         RefreshableMetricFamilySamples familySamples;
         if(!familyCache.containsKey(metricName)) {
             familyCache.put(metricName, prototype);
-            familySamples = prototype;
+            cache.put(dropwizardName, metricName);
         } else {
             familySamples = familyCache.get(metricName);
+            prototype.getDefinitions().forEach(familySamples::addDefinition);
         }
-
-        familySamples.getListFillers().putAll(prototype.getListFillers());
-        prototype.getDefinitions().forEach(familySamples::addDefinition);
-        cache.put(dropwizardName, metricName);
     }
 
     public void removeFromCache(String dropwizardName) {
@@ -55,18 +56,19 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
 
         RefreshableMetricFamilySamples familySampler = familyCache.get(metricName);
 
-        familySampler.removeSampleFiller(dropwizardName);
-        familySampler.getDefinitions().removeIf(cmd -> cmd.getMetricName().equals(metricName));
+        familySampler.getDefinitions().removeIf(cmd -> cmd.getMetricName().equals(metricName) ||
+                cmd.getMetricName().equals(metricName + "_count") ||
+                cmd.getMetricName().equals(metricName + "_total"));
 
-        if ((familySampler.getListFillers().size() + familySampler.getDefinitions().size()) < 1) {
+        if(familySampler.getDefinitions().size() == 0) {
             this.familyCache.remove(metricName);
+            cache.remove(dropwizardName);
         }
-        cache.remove(dropwizardName);
     }
 
     @NotNull
-    private static Consumer<List<Collector.MetricFamilySamples.Sample>> getGaugeHistogramFiller(Gauge gauge, CassandraMetricDefinition proto, CassandraMetricDefinition count) {
-        return (samples) -> {
+    private void setGaugeHistogramFiller(Gauge gauge, CassandraMetricDefinition proto) {
+        proto.setFiller((samples) -> {
             if(gauge.getValue() == null) {
                 return;
             }
@@ -91,11 +93,7 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
                         hist.percentile(PRECOMPUTED_QUANTILES[i]));
                 samples.add(sample);
             }
-
-            // _count
-            count.setValueGetter(() -> (double) hist.count());
-            samples.add(count.buildSample());
-        };
+        });
     }
 
     private Supplier<Double> fromGauge(final Gauge<?> gauge) {
@@ -124,18 +122,36 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
 
         if(gauge.getValue() instanceof long[]) {
             // Treat this as a histogram, not gauge
-            final CassandraMetricDefinition proto = parser.parseDropwizardMetric(dropwizardName, "", List.of("quantile"), new ArrayList<>(), null);
-            final CassandraMetricDefinition count = parser.parseDropwizardMetric(dropwizardName, "_count", new ArrayList<>(), new ArrayList<>(), null);
+            final CassandraMetricDefinition proto = parser.parseDropwizardMetric(dropwizardName, "", List.of("quantile"), new ArrayList<>());
+            final CassandraMetricDefinition count = parser.parseDropwizardMetric(dropwizardName, "_count", new ArrayList<>(), new ArrayList<>());
 
-            Consumer<List<Collector.MetricFamilySamples.Sample>> gaugeHistogramFiller = getGaugeHistogramFiller(gauge, proto, count);
+            setGaugeHistogramFiller(gauge, proto);
+
+            count.setValueGetter(() -> {
+                if (gauge.getValue() == null) {
+                    return 0.0;
+                }
+                long[] inputValues = (long[]) gauge.getValue();
+                if (inputValues.length == 0) {
+                    // Empty
+                    return 0.0;
+                }
+
+                // _count
+                final EstimatedHistogram hist = new EstimatedHistogram(inputValues);
+                return (double) hist.count();
+            });
 
             RefreshableMetricFamilySamples familySamples = new RefreshableMetricFamilySamples(proto.getMetricName(), Collector.Type.SUMMARY, "", new ArrayList<>());
-            familySamples.addSampleFiller(dropwizardName, gaugeHistogramFiller);
+            familySamples.addDefinition(proto);
+            familySamples.addDefinition(count);
 
             updateCache(dropwizardName, proto.getMetricName(), familySamples);
             return;
         }
-        CassandraMetricDefinition sample = parser.parseDropwizardMetric(dropwizardName, "", new ArrayList<>(), new ArrayList<>(), fromGauge(gauge));
+        Supplier<Double> gaugeSupplier = fromGauge(gauge);
+        CassandraMetricDefinition sample = parser.parseDropwizardMetric(dropwizardName, "", new ArrayList<>(), new ArrayList<>());
+        sample.setValueGetter(gaugeSupplier);
         RefreshableMetricFamilySamples familySamples = new RefreshableMetricFamilySamples(sample.getMetricName(), Collector.Type.GAUGE, "", new ArrayList<>());
         familySamples.addDefinition(sample);
         updateCache(dropwizardName, sample.getMetricName(), familySamples);
@@ -152,7 +168,8 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
             return;
         }
         Supplier<Double> getValue = () -> (double) counter.getCount();
-        CassandraMetricDefinition sampler = parser.parseDropwizardMetric(name, "", new ArrayList<>(), new ArrayList<>(), getValue);
+        CassandraMetricDefinition sampler = parser.parseDropwizardMetric(name, "", new ArrayList<>(), new ArrayList<>());
+        sampler.setValueGetter(getValue);
         RefreshableMetricFamilySamples familySamples = new RefreshableMetricFamilySamples(sampler.getMetricName(), Collector.Type.GAUGE, "", new ArrayList<>());
         familySamples.addDefinition(sampler);
         updateCache(name, sampler.getMetricName(), familySamples);
@@ -170,19 +187,22 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
         }
         // TODO Do we want extra processing for DecayingHistogram and EstimatedHistograms?
 
-        final CassandraMetricDefinition proto = parser.parseDropwizardMetric(dropwizardName, "", List.of("quantile"), new ArrayList<>(), () -> 0.0);
-        final CassandraMetricDefinition count = parser.parseDropwizardMetric(dropwizardName, "_count", new ArrayList<>(), new ArrayList<>(), () -> (double) histogram.getCount());
+        final CassandraMetricDefinition proto = parser.parseDropwizardMetric(dropwizardName, "", List.of("quantile"), new ArrayList<>());
+        final CassandraMetricDefinition count = parser.parseDropwizardMetric(dropwizardName, "_count", new ArrayList<>(), new ArrayList<>());
+        Supplier<Double> countSupplier = () -> (double) histogram.getCount();
 
         RefreshableMetricFamilySamples familySamples = new RefreshableMetricFamilySamples(proto.getMetricName(), Collector.Type.SUMMARY, "", new ArrayList<>());
-        Consumer<List<Collector.MetricFamilySamples.Sample>> histogramFiller = getHistogramFiller(histogram, proto, count, 1.0);
-        familySamples.addSampleFiller(dropwizardName, histogramFiller);
+        setHistogramFiller(histogram, proto, 1.0);
+        count.setValueGetter(countSupplier);
+        familySamples.addDefinition(proto);
+        familySamples.addDefinition(count);
 
         updateCache(dropwizardName, proto.getMetricName(), familySamples);
     }
 
     @NotNull
-    private static Consumer<List<Collector.MetricFamilySamples.Sample>> getHistogramFiller(Histogram histogram, CassandraMetricDefinition proto, CassandraMetricDefinition count, double factor) {
-        return (samples) -> {
+    private static void setHistogramFiller(Histogram histogram, CassandraMetricDefinition proto, double factor) {
+        proto.setFiller((samples) -> {
             Snapshot snapshot = histogram.getSnapshot();
             double[] values = new double[]{
                     snapshot.getMedian(),
@@ -206,8 +226,7 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
                         values[i] * factor);
                 samples.add(sample);
             }
-            samples.add(count.buildSample());
-        };
+        });
     }
 
     @Override
@@ -222,7 +241,9 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
         }
 
         Supplier<Double> getValue = () -> (double) meter.getCount();
-        CassandraMetricDefinition total = parser.parseDropwizardMetric(name, "_total", new ArrayList<>(), new ArrayList<>(), getValue);
+        CassandraMetricDefinition total = parser.parseDropwizardMetric(name, "_total", new ArrayList<>(), new ArrayList<>());
+        total.setValueGetter(getValue);
+
         RefreshableMetricFamilySamples familySamples = new RefreshableMetricFamilySamples(total.getMetricName(), Collector.Type.COUNTER, "", new ArrayList<>());
         familySamples.addDefinition(total);
         updateCache(name, total.getMetricName(), familySamples);
@@ -234,8 +255,8 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
     }
 
     @NotNull
-    private static Consumer<List<Collector.MetricFamilySamples.Sample>> getTimerFiller(Timer timer, CassandraMetricDefinition proto, CassandraMetricDefinition count, double factor) {
-        return (samples) -> {
+    private void setTimerFiller(Timer timer, CassandraMetricDefinition proto, double factor) {
+        proto.setFiller((samples) -> {
             Snapshot snapshot = timer.getSnapshot();
             double[] values = new double[]{
                     snapshot.getMedian(),
@@ -259,8 +280,7 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
                         values[i] * factor);
                 samples.add(sample);
             }
-            samples.add(count.buildSample());
-        };
+        });
     }
 
     @Override
@@ -270,13 +290,16 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
         }
 
         double factor = 1.0D / TimeUnit.SECONDS.toNanos(1L);
-        final CassandraMetricDefinition proto = parser.parseDropwizardMetric(dropwizardName, "", List.of("quantile"), new ArrayList<>(), () -> 0.0);
-        final CassandraMetricDefinition count = parser.parseDropwizardMetric(dropwizardName, "_count", new ArrayList<>(), new ArrayList<>(), () -> (double) timer.getCount());
+        final CassandraMetricDefinition proto = parser.parseDropwizardMetric(dropwizardName, "", List.of("quantile"), new ArrayList<>());
+        final CassandraMetricDefinition count = parser.parseDropwizardMetric(dropwizardName, "_count", new ArrayList<>(), new ArrayList<>());
+        Supplier<Double> getValue = () -> (double) timer.getCount();
 
-        Consumer<List<Collector.MetricFamilySamples.Sample>> timerFiller = getTimerFiller(timer, proto, count, factor);
+        count.setValueGetter(getValue);
+        setTimerFiller(timer, proto, factor);
 
         RefreshableMetricFamilySamples familySamples = new RefreshableMetricFamilySamples(proto.getMetricName(), Collector.Type.SUMMARY, "", new ArrayList<>());
-        familySamples.addSampleFiller(dropwizardName, timerFiller);
+        familySamples.addDefinition(proto);
+        familySamples.addDefinition(count);
 
         updateCache(dropwizardName, proto.getMetricName(), familySamples);
     }
