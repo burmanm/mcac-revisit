@@ -52,6 +52,9 @@ public class FilteringSpec {
         StringJoiner joiner = new StringJoiner(DEFAULT_SEPARATOR);
         for (String sourceLabel : sourceLabels) {
             String labelValue = labels.get(sourceLabel);
+            if(labelValue == null) {
+                labelValue = "";
+            }
             joiner.add(labelValue);
         }
 

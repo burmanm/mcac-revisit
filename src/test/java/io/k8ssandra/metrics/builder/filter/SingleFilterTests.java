@@ -92,4 +92,19 @@ public class SingleFilterTests {
         assertTrue(filter.matches(keyspaceDefinition, "org.apache.cassandra.metrics.Keyspace.RangeLatency"));
     }
 
+    @Test
+    public void OnlyMatchingLabel() {
+        FilteringSpec tableLabelFilter = new FilteringSpec(List.of("table"), "@", ".+", "drop");
+        CassandraMetricDefinitionFilter filter = new CassandraMetricDefinitionFilter(List.of(tableLabelFilter));
+
+        CassandraMetricDefinition hasTableLabel = new CassandraMetricDefinition("has_table_label", List.of("table"), List.of("value"));
+        assertFalse(filter.matches(hasTableLabel, ""));
+
+        CassandraMetricDefinition hasNoLabels = new CassandraMetricDefinition("has_table_label", List.of(), List.of());
+        assertTrue(filter.matches(hasNoLabels, ""));
+
+        CassandraMetricDefinition hasOtherLabels = new CassandraMetricDefinition("has_table_label", List.of("keyspace"), List.of("value"));
+        assertTrue(filter.matches(hasOtherLabels, ""));
+    }
+
 }
