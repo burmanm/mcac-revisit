@@ -4,6 +4,8 @@ import com.codahale.metrics.Gauge;
 import com.codahale.metrics.Metric;
 import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
+import io.k8ssandra.metrics.builder.filter.CassandraMetricDefinitionFilter;
+import io.k8ssandra.metrics.builder.filter.FilteringSpec;
 import io.k8ssandra.metrics.prometheus.CassandraDropwizardExports;
 import io.prometheus.client.Collector;
 import org.junit.jupiter.api.Test;
@@ -54,13 +56,9 @@ public class MetricsRegistryTest {
     @Test
     void verifyRegistryFilteredListener() {
         MetricRegistry registry = new MetricRegistry();
-        MetricFilter filter = new MetricFilter() {
-            @Override
-            public boolean matches(String name, Metric metric) {
-                return name.startsWith("g_a");
-            }
-        };
-        CassandraDropwizardExports exporter = new CassandraDropwizardExports(registry, filter);
+        FilteringSpec spec = new FilteringSpec(List.of("__name__"), "", "g_a.*", "drop");
+        CassandraMetricDefinitionFilter metricFilter = new CassandraMetricDefinitionFilter(List.of(spec));
+        CassandraDropwizardExports exporter = new CassandraDropwizardExports(registry, metricFilter);
         int metricsCount = 10;
         for (int i = 0; i < metricsCount; i++) {
             registry.register(String.format("g_nr_%d", i), (Gauge<Integer>) () -> 3);

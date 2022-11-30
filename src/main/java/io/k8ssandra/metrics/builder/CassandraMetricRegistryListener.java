@@ -1,9 +1,9 @@
 package io.k8ssandra.metrics.builder;
 
 import com.codahale.metrics.*;
+import io.k8ssandra.metrics.builder.filter.CassandraMetricDefinitionFilter;
 import io.prometheus.client.Collector;
 import org.apache.cassandra.utils.EstimatedHistogram;
-import org.jetbrains.annotations.NotNull;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
@@ -21,14 +21,14 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
 
     private final CassandraMetricNameParser parser;
 
-    private final MetricFilter metricFilter;
+    private final CassandraMetricDefinitionFilter metricFilter;
 
     private final ConcurrentHashMap<String, RefreshableMetricFamilySamples> familyCache;
 
     // This cache is used for the remove purpose, we need dropwizardName -> metricName mapping
     private final ConcurrentHashMap<String, String> cache;
 
-    public CassandraMetricRegistryListener(ConcurrentHashMap<String, RefreshableMetricFamilySamples> familyCache, MetricFilter metricFilter) {
+    public CassandraMetricRegistryListener(ConcurrentHashMap<String, RefreshableMetricFamilySamples> familyCache, CassandraMetricDefinitionFilter metricFilter) {
         parser = new CassandraMetricNameParser(CassandraMetricsTools.DEFAULT_LABEL_NAMES, CassandraMetricsTools.DEFAULT_LABEL_VALUES);
         cache = new ConcurrentHashMap<>();
         this.familyCache = familyCache;
@@ -36,10 +36,14 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
     }
 
     public void updateCache(String dropwizardName, String metricName, RefreshableMetricFamilySamples prototype) {
-        // TODO Add filtering here
+        prototype.getDefinitions().removeIf(next -> !metricFilter.matches(next, dropwizardName));
+
+        if (prototype.getDefinitions().size() < 1) {
+            return;
+        }
 
         RefreshableMetricFamilySamples familySamples;
-        if(!familyCache.containsKey(metricName)) {
+        if (!familyCache.containsKey(metricName)) {
             familyCache.put(metricName, prototype);
             cache.put(dropwizardName, metricName);
         } else {
@@ -66,7 +70,6 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
         }
     }
 
-    @NotNull
     private void setGaugeHistogramFiller(Gauge gauge, CassandraMetricDefinition proto) {
         proto.setFiller((samples) -> {
             if(gauge.getValue() == null) {
@@ -116,10 +119,6 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
 
     @Override
     public void onGaugeAdded(String dropwizardName, Gauge<?> gauge) {
-        if(!metricFilter.matches(dropwizardName, gauge)) {
-            return;
-        }
-
         if(gauge.getValue() instanceof long[]) {
             // Treat this as a histogram, not gauge
             final CassandraMetricDefinition proto = parser.parseDropwizardMetric(dropwizardName, "", List.of("quantile"), new ArrayList<>());
@@ -164,9 +163,6 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
 
     @Override
     public void onCounterAdded(String name, Counter counter) {
-        if(!metricFilter.matches(name, counter)) {
-            return;
-        }
         Supplier<Double> getValue = () -> (double) counter.getCount();
         CassandraMetricDefinition sampler = parser.parseDropwizardMetric(name, "", new ArrayList<>(), new ArrayList<>());
         sampler.setValueGetter(getValue);
@@ -182,9 +178,6 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
 
     @Override
     public void onHistogramAdded(String dropwizardName, Histogram histogram) {
-        if(!metricFilter.matches(dropwizardName, histogram)) {
-            return;
-        }
         // TODO Do we want extra processing for DecayingHistogram and EstimatedHistograms?
 
         final CassandraMetricDefinition proto = parser.parseDropwizardMetric(dropwizardName, "", List.of("quantile"), new ArrayList<>());
@@ -200,7 +193,6 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
         updateCache(dropwizardName, proto.getMetricName(), familySamples);
     }
 
-    @NotNull
     private static void setHistogramFiller(Histogram histogram, CassandraMetricDefinition proto, double factor) {
         proto.setFiller((samples) -> {
             Snapshot snapshot = histogram.getSnapshot();
@@ -236,10 +228,6 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
 
     @Override
     public void onMeterAdded(String name, Meter meter) {
-        if(!metricFilter.matches(name, meter)) {
-            return;
-        }
-
         Supplier<Double> getValue = () -> (double) meter.getCount();
         CassandraMetricDefinition total = parser.parseDropwizardMetric(name, "_total", new ArrayList<>(), new ArrayList<>());
         total.setValueGetter(getValue);
@@ -254,7 +242,6 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
         removeFromCache(name);
     }
 
-    @NotNull
     private void setTimerFiller(Timer timer, CassandraMetricDefinition proto, double factor) {
         proto.setFiller((samples) -> {
             Snapshot snapshot = timer.getSnapshot();
@@ -285,10 +272,6 @@ public class CassandraMetricRegistryListener implements MetricRegistryListener {
 
     @Override
     public void onTimerAdded(String dropwizardName, Timer timer) {
-        if(!metricFilter.matches(dropwizardName, timer)) {
-            return;
-        }
-
         double factor = 1.0D / TimeUnit.SECONDS.toNanos(1L);
         final CassandraMetricDefinition proto = parser.parseDropwizardMetric(dropwizardName, "", List.of("quantile"), new ArrayList<>());
         final CassandraMetricDefinition count = parser.parseDropwizardMetric(dropwizardName, "_count", new ArrayList<>(), new ArrayList<>());

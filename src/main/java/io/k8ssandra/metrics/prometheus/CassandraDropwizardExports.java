@@ -4,6 +4,7 @@ import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import io.k8ssandra.metrics.builder.CassandraMetricRegistryListener;
 import io.k8ssandra.metrics.builder.RefreshableMetricFamilySamples;
+import io.k8ssandra.metrics.builder.filter.CassandraMetricDefinitionFilter;
 import io.prometheus.client.Collector;
 import org.slf4j.LoggerFactory;
 
@@ -19,7 +20,6 @@ public class CassandraDropwizardExports extends Collector implements Collector.D
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(CassandraDropwizardExports.class);
     private final MetricRegistry registry;
-    private final MetricFilter metricFilter;
 
     private ConcurrentHashMap<String, RefreshableMetricFamilySamples> familyCache;
 
@@ -29,7 +29,7 @@ public class CassandraDropwizardExports extends Collector implements Collector.D
      * @param registry a metric registry to export in prometheus.
      */
     public CassandraDropwizardExports(MetricRegistry registry) {
-        this(registry, MetricFilter.ALL);
+        this(registry, new CassandraMetricDefinitionFilter(List.of()));
     }
 
     /**
@@ -38,9 +38,8 @@ public class CassandraDropwizardExports extends Collector implements Collector.D
      * @param registry     a metric registry to export in prometheus.
      * @param metricFilter a custom metric filter.
      */
-    public CassandraDropwizardExports(MetricRegistry registry, MetricFilter metricFilter) {
+    public CassandraDropwizardExports(MetricRegistry registry, CassandraMetricDefinitionFilter metricFilter) {
         this.registry = registry;
-        this.metricFilter = metricFilter;
         this.familyCache = new ConcurrentHashMap<>();
         registry.addListener(new CassandraMetricRegistryListener(this.familyCache, metricFilter));
     }

@@ -15,9 +15,11 @@ public class CassandraMetricDefinitionFilter {
 
     public boolean matches(CassandraMetricDefinition definition, String dropwizardName) {
         boolean keep = true;
-        HashMap<String, String> labels = getLabels(definition, dropwizardName);
-        for (FilteringSpec filter : filteringSpecs) {
-            keep &= filter.filter(labels);
+        if(filteringSpecs.size() > 0) {
+            HashMap<String, String> labels = getLabels(definition, dropwizardName);
+            for (FilteringSpec filter : filteringSpecs) {
+                keep &= filter.filter(labels);
+            }
         }
 
         return keep;
