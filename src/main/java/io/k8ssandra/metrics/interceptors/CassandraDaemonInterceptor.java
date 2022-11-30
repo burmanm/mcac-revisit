@@ -1,5 +1,8 @@
 package io.k8ssandra.metrics.interceptors;
 
+import io.k8ssandra.metrics.builder.filter.CassandraMetricDefinitionFilter;
+import io.k8ssandra.metrics.config.ConfigReader;
+import io.k8ssandra.metrics.config.Configuration;
 import io.k8ssandra.metrics.prometheus.CassandraDropwizardExports;
 import io.prometheus.client.exporter.HTTPServer;
 import io.prometheus.client.hotspot.DefaultExports;
@@ -33,8 +36,14 @@ public class CassandraDaemonInterceptor
         zuper.call();
         logger.info("Starting Metric Collector for Apache Cassandra");
 
+        // Read Configuration file
+        Configuration config = ConfigReader.readConfig();
+
+        // Initialize filtering
+        CassandraMetricDefinitionFilter filter = new CassandraMetricDefinitionFilter(config.getFilters());
+
         // Add Cassandra metrics
-        new CassandraDropwizardExports(CassandraMetricsRegistry.Metrics).register();
+        new CassandraDropwizardExports(CassandraMetricsRegistry.Metrics, filter).register();
 
         // Add JVM metrics
         DefaultExports.initialize();

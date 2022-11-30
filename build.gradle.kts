@@ -16,6 +16,7 @@ dependencies {
     implementation("net.bytebuddy:byte-buddy:1.12.19")
     implementation("io.prometheus:simpleclient_httpserver:0.16.0")
     implementation("io.prometheus:simpleclient_hotspot:0.16.0")
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.13.4")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.0")
     testImplementation("com.codahale.metrics:metrics-core:3.0.2")

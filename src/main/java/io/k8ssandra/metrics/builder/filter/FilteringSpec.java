@@ -40,7 +40,10 @@ public class FilteringSpec {
     @JsonProperty("action")
     private Action action;
 
-    @JsonCreator
+    public FilteringSpec() {
+
+    }
+
     public FilteringSpec(List<String> sourceLabels, String separator, String regex, String action) {
         this.sourceLabels = sourceLabels;
         this.separator = separator;

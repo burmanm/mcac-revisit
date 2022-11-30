@@ -1,8 +1,6 @@
 package io.k8ssandra.metrics.builder;
 
 import com.codahale.metrics.Gauge;
-import com.codahale.metrics.Metric;
-import com.codahale.metrics.MetricFilter;
 import com.codahale.metrics.MetricRegistry;
 import io.k8ssandra.metrics.builder.filter.CassandraMetricDefinitionFilter;
 import io.k8ssandra.metrics.builder.filter.FilteringSpec;
